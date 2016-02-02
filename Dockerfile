@@ -1,5 +1,5 @@
 FROM node:0.12
-MAINTAINER Meteorhacks
+MAINTAINER Ross Kukulinski <ross@kukulinski.com>
 
 COPY ./package.json /app/package.json
 RUN cd /app && npm install
