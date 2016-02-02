@@ -58,7 +58,7 @@ variable in the docker-compose.yml:
 
 ```
 environment:
-  - affinity:container!=montioring-agent*
+  - affinity:container!=monitoring-agent*
 ```
 
 Now that the monitoring system is up, we can open the Graphite UI.
