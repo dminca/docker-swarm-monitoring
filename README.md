@@ -4,10 +4,10 @@ Monitor Docker containers running in Rackspace Carina using graphite & statsd
 
 ### Background
 
-Rackspace Carina is a Docker Swarm-as-a-Service platform that runs on 
+Rackspace Carina is a Docker Swarm-as-a-Service platform that runs on
 bare-metal servers.
 
-### Prerequisites 
+### Prerequisites
  * Rackspace Carina cluster
  * docker and docker-compose cli installed on your local machine
  * Rackspace Carina cli installed on your local machine
@@ -19,7 +19,7 @@ bare-metal servers.
 
 ### Step by step walk through
 
-Before we can launch the monitoring containers, we need to get three pieces of 
+Before we can launch the monitoring containers, we need to get three pieces of
 information:
 
 1. The segment ID of the first segment in your cluster
@@ -46,14 +46,14 @@ Ok, now we are ready to deploy the monitoring containers.
 
 ### Launch the monitoring containers
 ```
-docker-compose -p monitor -f monitoring.yml up -d 
+docker-compose -p monitor -f monitoring.yml up -d
 docker-compose -p monitor -f monitoring.yml scale monitoring-agent=$(docker info | grep Nodes | awk '{print $2}')
 ```
 
 This first command launches the statsd/graphite container and a single monitoring agent.
 The second command finds out how many segments you have in your cluster and then scales
 the monitoring agent so that there is the same number as segments.  We ensure
-that a monitoring agent is put onto each segment via the affinity environmental 
+that a monitoring agent is put onto each segment via the affinity environmental
 variable in the docker-compose.yml:
 
 ```
@@ -65,7 +65,7 @@ Now that the monitoring system is up, we can open the Graphite UI.
 
 ### Open Graphite UI
 
-Using the public IP of the first segment in your cluster, we can access the 
+Using the public IP of the first segment in your cluster, we can access the
 graphite dashboard.  Using your web browser, navigate to the public IP http://$SEGMENT_PUBLIC_IP
 You can get that IP by running:
 
