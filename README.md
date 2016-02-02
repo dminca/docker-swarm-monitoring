@@ -1,69 +1,89 @@
-# docker-stats-statsd
+# Rackspace Carina Container Monitoring
 
-Forward all your stats to Etsy's [Statsd](https://github.com/etsy/statsd), like a breeze.
+Monitor Docker containers running in Rackspace Carina using graphite & statsd
 
-## Usage as a Container
+### Background
 
-The simplest way to forward all your container's log to Statsd. Given the versatility of statsd, you can configure the metrics to go to any supported backends; including Librato, Graphite. All you have to do is run this repository as a container, with:
+Rackspace Carina is a Docker Swarm-as-a-Service platform that runs on 
+bare-metal servers.
 
-```sh
-docker run \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -e STATSD_HOST="" \
-  -e STATSD_PORT="" \
-  -e STATSD_PREFIX="" \
-  edyn/docker-stats-statsd
+### Prerequisites 
+ * Rackspace Carina cluster
+ * docker and docker-compose cli installed on your local machine
+ * Rackspace Carina cli installed on your local machine
+
+### TLDR; one liner to get up and running
 ```
-Note that all three options default to reasonable values (STATSD_HOST, STATSD_PORT, STATSD_PREFIX) => (127.0.0.1, 8125, "docker.")
-```
-
-### Running container in a restricted environment.
-Some environments(such as Google Compute Engine) does not allow to access the docker socket without special privileges. You will get EACCES(`Error: read EACCES`) error if you try to run the container. To run the container in such environments add --privileged to the `docker run` command.
-
-Example:
-```sh
-docker run --privileged \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -e STATSD_HOST="" \
-  -e STATSD_PORT="" \
-  -e STATSD_PREFIX="" \
-  edyn/docker-stats-statsd
+./launch.sh
 ```
 
-## Building a docker repo from this repository
+### Step by step walk through
 
-First clone this repository, then:
+Before we can launch the monitoring containers, we need to get three pieces of 
+information:
 
-```bash
-docker build -t docker-stats .
-docker run \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  docker-stats
+1. The segment ID of the first segment in your cluster
+2. The service net IP of the first segment in your cluster
+3. The public IP of the first segment in your cluster
+
+We can get this information by running these commands:
+```
+SEGMENT_ID=$(docker info | grep n1 | awk '{print $1}' | tr -d :)
+SEGMENT_PUBLIC_IP=$(docker run --rm --net=host --env constraint:node==${SEGMENT_ID} racknet/ip public)
+SEGMENT_SERVICE_IP=$(docker run --rm --net=host --env constraint:node==${SEGMENT_ID} racknet/ip service)
 ```
 
-## How it works
+Next, we need to update the docker-compose.yml file with this information.
 
-This module wraps four [Docker
-APIs](https://docs.docker.com/reference/api/docker_remote_api_v1.17/):
+This next command inserts information about your cluster and creates a new
+docker compose file called monitoring.yml.
 
-* `POST /containers/{id}/attach`, to fetch the logs
-* `GET /containers/{id}/stats`, to fetch the stats of the container
-* `GET /containers/json`, to detect the containers that are running when
-  this module starts
-* `GET /events`, to detect new containers that will start after the
-  module has started
+```
+sed 's/SEGMENT_ID/'${SEGMENT_ID}'/g; s/SEGMENT_PUBLIC_IP/'${SEGMENT_PUBLIC_IP}'/g; s/SEGMENT_SERVICE_IP/'${SEGMENT_SERVICE_IP}'/g' docker-compose.yml > monitoring.yml
+```
 
-This module wraps
-[docker-loghose](https://github.com/mcollina/docker-loghose) and
-[docker-stats](https://github.com/pelger/docker-stats) to fetch the logs
-and the stats as a never ending stream of data.
+Ok, now we are ready to deploy the monitoring containers.
 
-All the originating requests are wrapped in a
-[never-ending-stream](https://github.com/mcollina/never-ending-stream).
+### Launch the monitoring containers
+```
+docker-compose -p monitor -f monitoring.yml up -d 
+docker-compose -p monitor -f monitoring.yml scale monitoring-agent=$(docker info | grep Nodes | awk '{print $2}')
+```
+
+This first command launches the statsd/graphite container and a single monitoring agent.
+The second command finds out how many segments you have in your cluster and then scales
+the monitoring agent so that there is the same number as segments.  We ensure
+that a monitoring agent is put onto each segment via the affinity environmental 
+variable in the docker-compose.yml:
+
+```
+environment:
+  - affinity:container!=montioring-agent*
+```
+
+Now that the monitoring system is up, we can open the Graphite UI.
+
+### Open Graphite UI
+
+Using the public IP of the first segment in your cluster, we can access the 
+graphite dashboard.  Using your web browser, navigate to the public IP http://$SEGMENT_PUBLIC_IP
+You can get that IP by running:
+
+```
+echo $SEGMENT_PUBLIC_IP
+```
+
+1. In the Graphite Composer window, click 'Graph Data', then 'Add'
+2. Enter 'aliasByNode(stats.gauges.docker.*.memory.usage,3)' and press OK
+
+You should now see the memory usage of the containers in your cluster!  You might
+need to adjust the time window of the graph to see the data better. You can
+do this by clicking on the clock icon, and entering 10 minutes.
+
 
 ## Credits
 
-This app is based on [Meteorhacks](https://github.com/meteorhacks/docker-librato).
+This app is based on [edyn/docker-docker-stats-statsd](https://github.com/edyn/docker-docker-stats-statsd).
 
 ## License
 

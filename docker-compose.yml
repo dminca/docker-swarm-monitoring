@@ -1,0 +1,20 @@
+graphite:
+  image: hopsoft/graphite-statsd
+  restart: always
+  environment:
+    - constraint:node==SEGMENT_ID
+  ports:
+    - 80:80
+    - SEGMENT_SERVICE_IP:8125:8125/udp # servicenet of n1, statsd rx on udp
+
+monitoring-agent:
+  image: hub.getyodlr.com/docker-swarm-stats
+  environment:
+    - STATSD_HOST=SEGMENT_SERVICE_IP
+    - STATSD_PORT=8125
+    - STATSD_PREFIX=docker.
+    - affinity:container!=montioring-agent*
+  restart: always
+  volumes:
+    - '/var/run/docker.sock:/var/run/docker.sock'
+    
