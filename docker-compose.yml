@@ -13,7 +13,7 @@ monitoring-agent:
     - STATSD_HOST=SEGMENT_SERVICE_IP
     - STATSD_PORT=8125
     - STATSD_PREFIX=docker.
-    - affinity:container!=monitoring-agent*
+    - affinity:container!=*monitoring-agent*
   restart: always
   volumes:
     - '/var/run/docker.sock:/var/run/docker.sock'
