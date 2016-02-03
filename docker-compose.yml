@@ -2,7 +2,7 @@ graphite:
   image: hopsoft/graphite-statsd
   restart: always
   environment:
-    - constraint:node==SEGMENT_ID
+    - constraint:node==*n1
   ports:
     - 80:80
     - SEGMENT_SERVICE_IP:8125:8125/udp # servicenet of n1, statsd rx on udp
