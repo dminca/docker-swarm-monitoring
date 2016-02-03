@@ -4,15 +4,16 @@ Monitor Docker containers running in Rackspace Carina using graphite & statsd
 
 ### Background
 
-Rackspace Carina is a Docker Swarm-as-a-Service platform that runs on
+[Rackspace Carina](https://getcarina.com/) is a Docker Swarm-as-a-Service platform that runs on
 bare-metal servers.
 
 ### Prerequisites
- * Rackspace Carina cluster
- * docker and docker-compose cli installed on your local machine
- * Rackspace Carina cli installed on your local machine
+ * [Rackspace Carina cluster](https://getcarina.com/docs/tutorials/create-connect-cluster/)
+ * [docker](https://docs.docker.com/engine/installation/binaries/#get-the-docker-binary) and [docker-compose](https://docs.docker.com/compose/install/) cli installed on your local machine
+ * [Rackspace Carina cli](https://github.com/getcarina/carina/blob/master/README.md#installation) installed on your local machine
 
 ### TLDR; one liner to get up and running
+
 ```
 ./launch.sh
 ```
@@ -28,9 +29,8 @@ information:
 
 We can get this information by running these commands:
 ```
-SEGMENT_ID=$(docker info | grep n1 | awk '{print $1}' | tr -d :)
-SEGMENT_PUBLIC_IP=$(docker run --rm --net=host --env constraint:node==${SEGMENT_ID} racknet/ip public)
-SEGMENT_SERVICE_IP=$(docker run --rm --net=host --env constraint:node==${SEGMENT_ID} racknet/ip service)
+SEGMENT_PUBLIC_IP=$(docker run --rm --net=host --env constraint:node==*n1 racknet/ip public)
+SEGMENT_SERVICE_IP=$(docker run --rm --net=host --env constraint:node==*n1 racknet/ip service)
 ```
 
 Next, we need to update the docker-compose.yml file with this information.
@@ -39,7 +39,7 @@ This next command inserts information about your cluster and creates a new
 docker compose file called monitoring.yml.
 
 ```
-sed 's/SEGMENT_ID/'${SEGMENT_ID}'/g; s/SEGMENT_PUBLIC_IP/'${SEGMENT_PUBLIC_IP}'/g; s/SEGMENT_SERVICE_IP/'${SEGMENT_SERVICE_IP}'/g' docker-compose.yml > monitoring.yml
+sed 's/SEGMENT_SERVICE_IP/'${SEGMENT_SERVICE_IP}'/g' docker-compose.yml > monitoring.yml
 ```
 
 Ok, now we are ready to deploy the monitoring containers.
@@ -58,7 +58,7 @@ variable in the docker-compose.yml:
 
 ```
 environment:
-  - affinity:container!=monitoring-agent*
+  - affinity:container!=*monitoring-agent*
 ```
 
 Now that the monitoring system is up, we can open the Graphite UI.
@@ -70,7 +70,7 @@ graphite dashboard.  Using your web browser, navigate to the public IP http://$S
 You can get that IP by running:
 
 ```
-echo $SEGMENT_PUBLIC_IP
+echo http://$SEGMENT_PUBLIC_IP
 ```
 
 1. In the Graphite Composer window, click 'Graph Data', then 'Add'
